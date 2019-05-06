@@ -3,6 +3,7 @@ package com.rtcdemo;
 import android.app.Activity;
 import android.os.Bundle;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.Toast;
@@ -38,7 +39,7 @@ public class MainActivity extends Activity implements RongRTCEventsListener, Vie
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main_activity_layout);
         initView();
-        getActionBar().setTitle("房间号: " + mRoomId);
+//        getActionBar().setTitle("房间号: " + mRoomId);
         joinRoom();
     }
 
@@ -46,6 +47,7 @@ public class MainActivity extends Activity implements RongRTCEventsListener, Vie
         local = (RongRTCVideoView) findViewById(R.id.local);
         remotes = (LinearLayout) findViewById(R.id.remotes);
         button = (Button) findViewById(R.id.finish);
+        button.setVisibility(View.GONE);
         button.setOnClickListener(this);
     }
 
@@ -167,7 +169,7 @@ public class MainActivity extends Activity implements RongRTCEventsListener, Vie
 
     private RongRTCVideoView getNewVideoView() {
         RongRTCVideoView videoView = RongRTCEngine.getInstance().createVideoView(this);
-        remotes.addView(videoView, new LinearLayout.LayoutParams(300, 300));
+        remotes.addView(videoView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         remotes.bringToFront();
         return videoView;
     }
@@ -249,6 +251,18 @@ public class MainActivity extends Activity implements RongRTCEventsListener, Vie
 
     @Override
     public void onClick(View v) {
+        quit();
+        finish();
+    }
+
+    @Override
+    public void onBackPressed() {
+        quit();
+        super.onBackPressed();
+
+    }
+
+    private void quit(){
         RongRTCEngine.getInstance().quitRoom(mRongRTCRoom.getRoomId(), new RongRTCResultUICallBack() {
             @Override
             public void onUiSuccess() {
@@ -260,6 +274,5 @@ public class MainActivity extends Activity implements RongRTCEventsListener, Vie
                 Toast.makeText(MainActivity.this, "离开房间失败", Toast.LENGTH_SHORT).show();
             }
         });
-        finish();
     }
 }

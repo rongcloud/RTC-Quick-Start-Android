@@ -4,13 +4,14 @@
     android:layout_height="match_parent">
     <cn.rongcloud.rtc.engine.view.RongRTCVideoView
         android:id="@+id/local"
+        android:layout_marginTop="50dp"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
     <LinearLayout
         android:id="@+id/remotes"
-        android:layout_width="match_parent"
-        android:layout_height="300px"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
         android:background="@android:color/holo_green_light"
         android:orientation="horizontal"></LinearLayout>
 
@@ -19,5 +20,6 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
+        android:visibility="gone"
         android:text="finish" />
 </FrameLayout>
