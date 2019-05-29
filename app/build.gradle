@@ -21,11 +21,12 @@ android {
         jniLibs.srcDir 'libs'
         jni.srcDirs = []
     }
+    buildToolsVersion = '28.0.3'
 
 
 }
 
 dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation project(':IMLib')
 }

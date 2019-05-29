@@ -2,9 +2,11 @@ package com.rtcdemo;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
@@ -33,6 +35,7 @@ public class MainActivity extends Activity implements RongRTCEventsListener, Vie
     private RongRTCRoom mRongRTCRoom;
     private RongRTCLocalUser mLocalUser;
     private Button button;
+    private FrameLayout localContainer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,7 +47,10 @@ public class MainActivity extends Activity implements RongRTCEventsListener, Vie
     }
 
     private void initView() {
-        local = (RongRTCVideoView) findViewById(R.id.local);
+        local = RongRTCEngine.getInstance().createVideoView(this);
+        local.setOnClickListener(this);
+        localContainer = (FrameLayout) findViewById(R.id.local_container);
+        localContainer.addView(local);
         remotes = (LinearLayout) findViewById(R.id.remotes);
         button = (Button) findViewById(R.id.finish);
         button.setVisibility(View.GONE);
@@ -75,8 +81,6 @@ public class MainActivity extends Activity implements RongRTCEventsListener, Vie
             }
         });
     }
-
-
     /**
      * 注册监听
      */
@@ -122,7 +126,6 @@ public class MainActivity extends Activity implements RongRTCEventsListener, Vie
                 }
             }
         }
-
     }
 
     /**
@@ -168,8 +171,10 @@ public class MainActivity extends Activity implements RongRTCEventsListener, Vie
     }
 
     private RongRTCVideoView getNewVideoView() {
+        Log.i(TAG, "getNewVideoView()");
         RongRTCVideoView videoView = RongRTCEngine.getInstance().createVideoView(this);
-        remotes.addView(videoView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        videoView.setOnClickListener(this);
+        remotes.addView(videoView, new LinearLayout.LayoutParams(remotes.getHeight(), remotes.getHeight()));
         remotes.bringToFront();
         return videoView;
     }
@@ -251,8 +256,25 @@ public class MainActivity extends Activity implements RongRTCEventsListener, Vie
 
     @Override
     public void onClick(View v) {
-        quit();
-        finish();
+        if (v.getId() == R.id.finish) {
+            quit();
+            finish();
+        } else if (v instanceof RongRTCVideoView) {
+            int index = -1;
+            for (int i = 0; i < remotes.getChildCount(); i++) {
+                RongRTCVideoView videoView = (RongRTCVideoView) remotes.getChildAt(i);
+                if (videoView == v) {
+                    index = i;
+                }
+            }
+            if (index != -1) {
+                RongRTCVideoView big = (RongRTCVideoView) localContainer.getChildAt(0);
+                localContainer.removeViewAt(0);
+                remotes.addView(big,index, new LinearLayout.LayoutParams(remotes.getHeight(), remotes.getHeight()));
+                remotes.removeView(v);
+                localContainer.addView(v, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            }
+        }
     }
 
     @Override
@@ -262,7 +284,7 @@ public class MainActivity extends Activity implements RongRTCEventsListener, Vie
 
     }
 
-    private void quit(){
+    private void quit() {
         RongRTCEngine.getInstance().quitRoom(mRongRTCRoom.getRoomId(), new RongRTCResultUICallBack() {
             @Override
             public void onUiSuccess() {
