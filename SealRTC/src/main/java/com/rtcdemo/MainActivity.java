@@ -31,7 +31,7 @@ public class MainActivity extends Activity implements RongRTCEventsListener, Vie
     private RongRTCVideoView local;
     private LinearLayout remotes;
     private String mToken = MyApp.token1;         //用户token 不通的自己修改
-    private String mRoomId = "roomId04"; //自己可以随意修改
+    private String mRoomId = "quickStartDemoroom"; //自己可以随意修改
     private RongRTCRoom mRongRTCRoom;
     private RongRTCLocalUser mLocalUser;
     private Button button;
