@@ -4,8 +4,9 @@ public class UserProfile {
     private String userId;
     private String token;
 
-    public UserProfile(String userId) {
+    public UserProfile(String userId, String token) {
         this.userId = userId;
+        this.token = token;
     }
 
     public String getUserId() {
