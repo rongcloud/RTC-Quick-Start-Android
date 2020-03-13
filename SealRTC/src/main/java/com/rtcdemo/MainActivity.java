@@ -1,13 +1,16 @@
 package com.rtcdemo;
 
 import android.app.Activity;
+import android.content.pm.ActivityInfo;
+import android.content.res.Configuration;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.FrameLayout;
 import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.List;
@@ -16,6 +19,7 @@ import cn.rongcloud.rtc.RTCErrorCode;
 import cn.rongcloud.rtc.RongRTCEngine;
 import cn.rongcloud.rtc.callback.JoinRoomUICallBack;
 import cn.rongcloud.rtc.callback.RongRTCResultUICallBack;
+import cn.rongcloud.rtc.core.RendererCommon;
 import cn.rongcloud.rtc.engine.view.RongRTCVideoView;
 import cn.rongcloud.rtc.events.RongRTCEventsListener;
 import cn.rongcloud.rtc.room.RongRTCRoom;
@@ -24,37 +28,76 @@ import cn.rongcloud.rtc.stream.local.RongRTCCapture;
 import cn.rongcloud.rtc.stream.remote.RongRTCAVInputStream;
 import cn.rongcloud.rtc.user.RongRTCLocalUser;
 import cn.rongcloud.rtc.user.RongRTCRemoteUser;
+import cn.rongcloud.rtc.utils.FinLog;
 import io.rong.imlib.model.Message;
 
 public class MainActivity extends Activity implements RongRTCEventsListener, View.OnClickListener {
     private static final String TAG = "MainActivity";
-    private RongRTCVideoView local;
-    private LinearLayout remotes;
-    private String mToken = MyApp.token1;         //用户token 不通的自己修改
-    private String mRoomId = "quickStartDemoroom"; //自己可以随意修改
+    private RongRTCVideoView localVideoView;
+    private LinearLayout remoteContainer;
+    private String mRoomId = "quickStartDemoRoom";
     private RongRTCRoom mRongRTCRoom;
     private RongRTCLocalUser mLocalUser;
     private Button button;
-    private FrameLayout localContainer;
+    private RelativeLayout localContainer;
+    private TextView exchangeView;
+    /**
+     * 记录点击切换屏幕方向时应使用的值。
+     */
+    int orientationValue = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main_activity_layout);
         initView();
-//        getActionBar().setTitle("房间号: " + mRoomId);
         joinRoom();
     }
 
     private void initView() {
-        local = RongRTCEngine.getInstance().createVideoView(this);
-        local.setOnClickListener(this);
-        localContainer = (FrameLayout) findViewById(R.id.local_container);
-        localContainer.addView(local);
-        remotes = (LinearLayout) findViewById(R.id.remotes);
+        localVideoView = RongRTCEngine.getInstance().createVideoView(this);
+        //设置视频的填充模式：SCALE_ASPECT_FIT - 代表显示完整视频，但是会留有黑边 ； 默认是 SCALE_ASPECT_FILL - 铺满父控件，裁剪超出边界部分
+        localVideoView.setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT);
+        localVideoView.setOnClickListener(this);
+        localContainer = (RelativeLayout) findViewById(R.id.local_container);
+        addToLocalContainer(localVideoView);
+
+
+        remoteContainer = (LinearLayout) findViewById(R.id.remotes);
         button = (Button) findViewById(R.id.finish);
         button.setVisibility(View.GONE);
         button.setOnClickListener(this);
+        exchangeView = (TextView) findViewById(R.id.exchange_orientation);
+        exchangeView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                setRequestedOrientation(orientationValue);
+            }
+        });
+    }
+
+    private void addToLocalContainer(RongRTCVideoView videoView) {
+        RelativeLayout.LayoutParams bigParams = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+        //设置控件居中显示
+        bigParams.addRule(RelativeLayout.CENTER_IN_PARENT);
+        //设置视频视图可以被上层其他视频覆盖
+        videoView.setZOrderMediaOverlay(false);
+        localContainer.removeAllViews();
+        localContainer.addView(videoView, bigParams);
+    }
+
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        if (this.getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            // 加入横屏要处理的代码
+            orientationValue = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT;
+
+        } else if (this.getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
+            // 加入竖屏要处理的代码
+            orientationValue = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE;
+        }
     }
 
     /**
@@ -67,7 +110,7 @@ public class MainActivity extends Activity implements RongRTCEventsListener, Vie
                 Toast.makeText(MainActivity.this, "加入房间成功", Toast.LENGTH_SHORT).show();
                 mRongRTCRoom = rongRTCRoom;
                 mLocalUser = rongRTCRoom.getLocalUser();
-                RongRTCCapture.getInstance().setRongRTCVideoView(local); //设置本地预览视图
+                RongRTCCapture.getInstance().setRongRTCVideoView(localVideoView); //设置本地预览视图
                 RongRTCCapture.getInstance().startCameraCapture();       //开始采集数据
                 setEventListener();                                      //设置监听
                 addRemoteUsersView();
@@ -134,7 +177,7 @@ public class MainActivity extends Activity implements RongRTCEventsListener, Vie
     private void subscribeAll() {
         if (mRongRTCRoom != null) {
             for (RongRTCRemoteUser remoteUser : mRongRTCRoom.getRemoteUsers().values()) {
-                remoteUser.subscribeAvStream(remoteUser.getRemoteAVStreams(), new RongRTCResultUICallBack() {
+                remoteUser.subscribeAVStream(remoteUser.getRemoteAVStreams(), new RongRTCResultUICallBack() {
                     @Override
                     public void onUiSuccess() {
                         Toast.makeText(MainActivity.this, "订阅资源成功", Toast.LENGTH_SHORT).show();
@@ -174,8 +217,11 @@ public class MainActivity extends Activity implements RongRTCEventsListener, Vie
         Log.i(TAG, "getNewVideoView()");
         RongRTCVideoView videoView = RongRTCEngine.getInstance().createVideoView(this);
         videoView.setOnClickListener(this);
-        remotes.addView(videoView, new LinearLayout.LayoutParams(remotes.getHeight(), remotes.getHeight()));
-        remotes.bringToFront();
+        //设置视频显示完整内容
+        videoView.setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT);
+        videoView.setZOrderMediaOverlay(true);
+        videoView.setZOrderOnTop(true);
+        remoteContainer.addView(videoView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         return videoView;
     }
 
@@ -187,7 +233,7 @@ public class MainActivity extends Activity implements RongRTCEventsListener, Vie
                 inputStream.setRongRTCVideoView(getNewVideoView());
             }
         }
-        rongRTCRemoteUser.subscribeAvStream(rongRTCRemoteUser.getRemoteAVStreams(), new RongRTCResultUICallBack() {
+        rongRTCRemoteUser.subscribeAVStream(rongRTCRemoteUser.getRemoteAVStreams(), new RongRTCResultUICallBack() {
             @Override
             public void onUiSuccess() {
                 Toast.makeText(MainActivity.this, "订阅成功", Toast.LENGTH_SHORT).show();
@@ -211,7 +257,7 @@ public class MainActivity extends Activity implements RongRTCEventsListener, Vie
     }
 
     @Override
-    public void onRemoteUserUnPublishResource(RongRTCRemoteUser rongRTCRemoteUser, List<RongRTCAVInputStream> list) {
+    public void onRemoteUserUnpublishResource(RongRTCRemoteUser rongRTCRemoteUser, List<RongRTCAVInputStream> list) {
 
     }
 
@@ -224,7 +270,7 @@ public class MainActivity extends Activity implements RongRTCEventsListener, Vie
     public void onUserLeft(RongRTCRemoteUser rongRTCRemoteUser) {
         for (RongRTCAVInputStream inputStream : rongRTCRemoteUser.getRemoteAVStreams()) {
             if (inputStream.getMediaType() == MediaType.VIDEO) {
-                remotes.removeView(inputStream.getRongRTCVideoView());
+                remoteContainer.removeView(inputStream.getRongRTCVideoView());
             }
         }
     }
@@ -261,18 +307,19 @@ public class MainActivity extends Activity implements RongRTCEventsListener, Vie
             finish();
         } else if (v instanceof RongRTCVideoView) {
             int index = -1;
-            for (int i = 0; i < remotes.getChildCount(); i++) {
-                RongRTCVideoView videoView = (RongRTCVideoView) remotes.getChildAt(i);
+            for (int i = 0; i < remoteContainer.getChildCount(); i++) {
+                RongRTCVideoView videoView = (RongRTCVideoView) remoteContainer.getChildAt(i);
+                FinLog.e(TAG,"touched = " +v+" :  "+videoView);
                 if (videoView == v) {
                     index = i;
                 }
             }
             if (index != -1) {
                 RongRTCVideoView big = (RongRTCVideoView) localContainer.getChildAt(0);
-                localContainer.removeViewAt(0);
-                remotes.addView(big,index, new LinearLayout.LayoutParams(remotes.getHeight(), remotes.getHeight()));
-                remotes.removeView(v);
-                localContainer.addView(v, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                localContainer.removeAllViews();
+                remoteContainer.addView(big, index, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                remoteContainer.removeView(v);
+                addToLocalContainer((RongRTCVideoView) v);
             }
         }
     }

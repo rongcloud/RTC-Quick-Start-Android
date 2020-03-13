@@ -19,7 +19,7 @@ import java.util.List;
 
 import io.rong.imlib.RongIMClient;
 
-import static cn.rongcloud.rtc.core.voiceengine.BuildInfo.MANDATORY_PERMISSIONS;
+import static cn.rongcloud.rtc.utils.BuildInfo.MANDATORY_PERMISSIONS;
 
 public class LoginActivity extends Activity implements View.OnClickListener {
     private Button Btn1;
