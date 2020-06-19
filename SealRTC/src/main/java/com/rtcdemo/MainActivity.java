@@ -301,6 +301,11 @@ public class MainActivity extends Activity implements RongRTCEventsListener, Vie
     }
 
     @Override
+    public void onKickedByServer() {
+
+    }
+
+    @Override
     public void onClick(View v) {
         if (v.getId() == R.id.finish) {
             quit();
