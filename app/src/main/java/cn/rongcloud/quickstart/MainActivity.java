@@ -47,7 +47,7 @@ public class MainActivity extends Activity {
       Manifest.permission.READ_EXTERNAL_STORAGE,
   };
 
-  private String mRoomId = "112233";
+  private static final String ROOMID = "112233";
   private RCRTCRoom rcrtcRoom = null;
   private TextView tv_textView;
   private FrameLayout frameyout_localUser, frameyout_remoteUser;
@@ -87,7 +87,7 @@ public class MainActivity extends Activity {
     }
     RongIMClient.connect(token, new ConnectCallback() {
       @Override
-      public void onSuccess(String s) {
+      public void onSuccess(String userid) {
         setText("登录成功");
         joinRoom();
       }
@@ -132,18 +132,23 @@ public class MainActivity extends Activity {
     frameyout_localUser.addView(rongRTCVideoView);
     RCRTCEngine.getInstance().getDefaultVideoStream().startCamera(null);
     //mRoomId,长度 64 个字符，可包含：`A-Z`、`a-z`、`0-9`、`+`、`=`、`-`、`_`
-    RCRTCEngine.getInstance().joinRoom(mRoomId, new IRCRTCResultDataCallback<RCRTCRoom>() {
+    RCRTCEngine.getInstance().joinRoom(ROOMID, new IRCRTCResultDataCallback<RCRTCRoom>() {
       @Override
-      public void onSuccess(RCRTCRoom rcrtcRoom) {
-        setText("加入房间成功");
-        MainActivity.this.rcrtcRoom = rcrtcRoom;
-        rcrtcRoom.registerRoomListener(roomEventsListener);
-        //加入房间成功后，开启摄像头采集视频数据
+      public void onSuccess(final RCRTCRoom rcrtcRoom) {
+        runOnUiThread(new Runnable() {
+          @Override
+          public void run() {
+            setText("加入房间成功");
+            MainActivity.this.rcrtcRoom = rcrtcRoom;
+            rcrtcRoom.registerRoomListener(roomEventsListener);
+            //加入房间成功后，开启摄像头采集视频数据
 //        RongRTCCapture.getInstance().startCameraCapture();
-        //加入房间成功后，发布默认音视频流
-        publishDefaultAVStream(rcrtcRoom);
-        //加入房间成功后，如果房间中已存在用户且发布了音、视频流，就订阅远端用户发布的音视频流.
-        subscribeAVStream(rcrtcRoom);
+            //加入房间成功后，发布默认音视频流
+            publishDefaultAVStream(rcrtcRoom);
+            //加入房间成功后，如果房间中已存在用户且发布了音、视频流，就订阅远端用户发布的音视频流.
+            subscribeAVStream(rcrtcRoom);
+          }
+        });
       }
 
       @Override
@@ -153,16 +158,21 @@ public class MainActivity extends Activity {
     });
   }
 
-  private void setText(String str) {
-    if (TextUtils.isEmpty(str)) {
-      tv_textView.setText("");
-      return;
-    }
-    StringBuffer stringBuffer = new StringBuffer();
-    stringBuffer.append(tv_textView.getText());
-    stringBuffer.append("->");
-    stringBuffer.append(str);
-    tv_textView.setText(stringBuffer.toString());
+  private void setText(final String str) {
+    runOnUiThread(new Runnable() {
+      @Override
+      public void run() {
+        if (TextUtils.isEmpty(str)) {
+          tv_textView.setText("");
+          return;
+        }
+        StringBuffer stringBuffer = new StringBuffer();
+        stringBuffer.append(tv_textView.getText());
+        stringBuffer.append("->");
+        stringBuffer.append(str);
+        tv_textView.setText(stringBuffer.toString());
+      }
+    });
   }
 
   private void leaveRoom() {
@@ -254,7 +264,9 @@ public class MainActivity extends Activity {
     }
   }
 
-
+  /**
+   * 房间事件监听文档：https://www.rongcloud.cn/docs/api/android/rtclib_v4/cn/rongcloud/rtc/api/callback/IRCRTCRoomEventsListener.html
+   */
   private IRCRTCRoomEventsListener roomEventsListener = new IRCRTCRoomEventsListener() {
 
     /**
@@ -264,28 +276,33 @@ public class MainActivity extends Activity {
      * @param list    发布的资源
      */
     @Override
-    public void onRemoteUserPublishResource(RCRTCRemoteUser rcrtcRemoteUser, List<RCRTCInputStream> list) {
-      for (RCRTCInputStream inputStream : list) {
-        if (inputStream.getMediaType() == RCRTCMediaType.VIDEO) {
-          RCRTCVideoView remoteVideoView = new RCRTCVideoView(getApplicationContext());
-          frameyout_remoteUser.removeAllViews();
-          //将远端视图添加至布局
-          frameyout_remoteUser.addView(remoteVideoView);
-          ((RCRTCVideoInputStream) inputStream).setVideoView(remoteVideoView);
-          //选择订阅大流或是小流。默认小流
-          ((RCRTCVideoInputStream) inputStream).setStreamType(RCRTCStreamType.NORMAL);
-        }
-      }
-      //TODO 按需在此订阅远端用户发布的资源
-      rcrtcRoom.getLocalUser().subscribeStreams(list, new IRCRTCResultCallback() {
+    public void onRemoteUserPublishResource(RCRTCRemoteUser rcrtcRemoteUser, final List<RCRTCInputStream> list) {
+      runOnUiThread(new Runnable() {
         @Override
-        public void onSuccess() {
-          setText("订阅成功");
-        }
+        public void run() {
+          for (RCRTCInputStream inputStream : list) {
+            if (inputStream.getMediaType() == RCRTCMediaType.VIDEO) {
+              RCRTCVideoView remoteVideoView = new RCRTCVideoView(getApplicationContext());
+              frameyout_remoteUser.removeAllViews();
+              //将远端视图添加至布局
+              frameyout_remoteUser.addView(remoteVideoView);
+              ((RCRTCVideoInputStream) inputStream).setVideoView(remoteVideoView);
+              //选择订阅大流或是小流。默认小流
+              ((RCRTCVideoInputStream) inputStream).setStreamType(RCRTCStreamType.NORMAL);
+            }
+          }
+          //TODO 按需在此订阅远端用户发布的资源
+          rcrtcRoom.getLocalUser().subscribeStreams(list, new IRCRTCResultCallback() {
+            @Override
+            public void onSuccess() {
+              setText("订阅成功");
+            }
 
-        @Override
-        public void onFailed(RTCErrorCode rtcErrorCode) {
-          setText("订阅失败：" + rtcErrorCode);
+            @Override
+            public void onFailed(RTCErrorCode rtcErrorCode) {
+              setText("订阅失败：" + rtcErrorCode);
+            }
+          });
         }
       });
     }
@@ -311,8 +328,13 @@ public class MainActivity extends Activity {
      * @param rcrtcRemoteUser 远端用户
      */
     @Override
-    public void onUserJoined(RCRTCRemoteUser rcrtcRemoteUser) {
-      Toast.makeText(MainActivity.this, "用户：" + rcrtcRemoteUser.getUserId() + " 加入房间", Toast.LENGTH_SHORT).show();
+    public void onUserJoined(final RCRTCRemoteUser rcrtcRemoteUser) {
+      runOnUiThread(new Runnable() {
+        @Override
+        public void run() {
+          Toast.makeText(MainActivity.this, "用户：" + rcrtcRemoteUser.getUserId() + " 加入房间", Toast.LENGTH_SHORT).show();
+        }
+      });
     }
 
     /**
@@ -322,7 +344,12 @@ public class MainActivity extends Activity {
      */
     @Override
     public void onUserLeft(RCRTCRemoteUser rcrtcRemoteUser) {
-      frameyout_remoteUser.removeAllViews();
+      runOnUiThread(new Runnable() {
+        @Override
+        public void run() {
+          frameyout_remoteUser.removeAllViews();
+        }
+      });
     }
 
     @Override
