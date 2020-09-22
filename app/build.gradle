@@ -29,6 +29,6 @@ android {
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation 'cn.rongcloud.sdk:im_lib:4.0.3'
-    implementation 'cn.rongcloud.sdk:rtc_lib:4.0.3'
+    implementation 'cn.rongcloud.sdk:rtc_lib:4.0.3.1'
 
 }
